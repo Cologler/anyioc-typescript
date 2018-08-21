@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "",
   "main": "./dist/anyioc.js",
+  "jsdelivr": "./dist/anyioc.bundle.js",
   "dependencies": {
     "anyflow": "^0.1.8"
   },
