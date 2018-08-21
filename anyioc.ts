@@ -10,6 +10,13 @@ export const Symbols = {
 export interface IServiceProvider {
     get<V>(key: any): V;
     scope(): IServiceProvider;
+    registerServiceInfo(key: any, serviceInfo: Service.IServiceInfo): void;
+    registerValue(key: any, value: any): void;
+    register(key: any, factory: Factory, lifetime: LifeTime): void;
+    registerTransient(key: any, factory: Factory): void;
+    registerScoped(key: any, factory: Factory): void;
+    registerSingleton(key: any, factory: Factory): void;
+    registerGroup(key: any, keys: any[]): void;
 }
 
 export type Factory = (provider: IServiceProvider) => any;
@@ -86,7 +93,7 @@ export namespace Missing {
 
     export class MissingResolver implements IMissingResolver {
         get(provider: IServiceProvider, key: any): any {
-            throw new Error('ServiceNotFoundError');
+            return undefined;
         }
     }
 }
@@ -161,6 +168,10 @@ class ScopedServiceProvider implements IServiceProvider {
 
     registerSingleton(key: any, factory: Factory) {
         return this.register(key, factory, LifeTime.Singleton);
+    }
+
+    registerGroup(key: any, keys: any[]) {
+        this._services.set(key, new Service.GroupedServiceInfo(keys));
     }
 
     scope(): IServiceProvider {

@@ -70,7 +70,7 @@ var Missing;
 (function (Missing) {
     class MissingResolver {
         get(provider, key) {
-            throw new Error('ServiceNotFoundError');
+            return undefined;
         }
     }
     Missing.MissingResolver = MissingResolver;
@@ -130,6 +130,9 @@ class ScopedServiceProvider {
     }
     registerSingleton(key, factory) {
         return this.register(key, factory, LifeTime.Singleton);
+    }
+    registerGroup(key, keys) {
+        this._services.set(key, new Service.GroupedServiceInfo(keys));
     }
     scope() {
         return new ScopedServiceProvider(this._services.child());

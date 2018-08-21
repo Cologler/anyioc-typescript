@@ -66,6 +66,7 @@ declare class ScopedServiceProvider implements IServiceProvider {
     registerTransient(key: any, factory: Factory): void;
     registerScoped(key: any, factory: Factory): void;
     registerSingleton(key: any, factory: Factory): void;
+    registerGroup(key: any, keys: any[]): void;
     scope(): IServiceProvider;
 }
 export declare class ServiceProvider extends ScopedServiceProvider {
