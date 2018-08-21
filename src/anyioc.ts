@@ -1,337 +1,172 @@
-import { App, Middleware, FlowContext, Next } from "anyflow";
+/* Copyright (c) 2018~2999 - Cologler <skyoflw@gmail.com> */
 
-interface ctor<T> {
-    new(): T;
+const Symbols = {
+    Provider: Symbol('Provider'),
+    RootProvider: Symbol('RootProvider'),
+    Cache: Symbol('Cache'),
+    MissingResolver: Symbol('MissingResolver'),
+}
+
+interface IServiceProvider {
+    get<V>(key: any): V;
+}
+
+type Factory = (provider: IServiceProvider) => any;
+
+namespace Service {
+    export enum LifeTime {
+        Transient = 0,
+        Scoped,
+        Singleton,
+    }
+
+    export interface IServiceInfo {
+        get(provider: IServiceProvider): any;
+    }
+
+    export class ServiceInfo implements IServiceInfo {
+        private _cache_value: [any] | null = null;
+
+        constructor(private _factory: Factory, private _lifetime: LifeTime) {
+        }
+
+        get(provider: IServiceProvider): any {
+            switch (this._lifetime) {
+                case LifeTime.Transient:
+                    return this._factory(provider);
+
+                case LifeTime.Scoped:
+                    const cache = provider.get<Map<IServiceInfo, any>>(Symbols.Cache);
+                    if (!cache.has(this)) {
+                        cache.set(this, this._factory(provider));
+                    }
+                    return cache.get(this);
+
+                case LifeTime.Singleton:
+                    if (this._cache_value === null) {
+                        provider = provider.get<IServiceProvider>(Symbols.RootProvider);
+                        this._cache_value = [this._factory(provider)];
+                    }
+                    return this._cache_value[0];
+            }
+        }
+    }
+
+    export class ProviderServiceInfo implements IServiceInfo {
+        get(provider: IServiceProvider) {
+            return provider;
+        }
+    }
+
+    export class ValueServiceInfo implements IServiceInfo {
+        constructor(private _value: any) {
+        }
+
+        get(provider: IServiceProvider) {
+            return this._value;
+        }
+    }
+
+    export class GroupedServiceInfo implements IServiceInfo {
+        constructor(private _keys: any[]) {
+        }
+
+        get(provider: IServiceProvider) {
+            return this._keys.map(key => provider.get(key));
+        }
+    }
+}
+
+namespace Missing {
+    export interface IMissingResolver {
+        get(provider: IServiceProvider, key: any): any;
+    }
+
+    export class MissingResolver implements IMissingResolver {
+        get(provider: IServiceProvider, key: any): any {
+            throw new Error('ServiceNotFoundError');
+        }
+    }
 }
 
 namespace Utils {
-    export class RecursiveDetecter<T> {
-        private _chain = new Set<T>();
+    export class ChainMap<K, V> {
+        private _maps: Array<Map<K, V>>;
 
-        private _enter(key: T) {
-            const n = this._chain.size;
-            this._chain.add(key);
-            if (n === this._chain.size) {
-                throw new Error('recursive redirect.');
-            }
+        constructor(parents: Array<Map<K, V>> = []) {
+            this._maps = [new Map<K, V>()];
+            this._maps.push(...parents);
         }
 
-        private _exit(key: T) {
-            this._chain.delete(key);
-        }
-
-        with<R>(key: T, callback: () => R): R {
-            this._enter(key);
-            try {
-                return callback();
-            } finally {
-                this._exit(key);
-            }
-        }
-    }
-
-    function isConstructor(func: Function) {
-        if (func.prototype.constructor) {
-
-        }
-    }
-}
-
-type Token = string | symbol | ctor<any>;
-
-namespace Services {
-
-    export type Token = string | symbol | ctor<any>;
-
-    export type Options = {
-        useNew?: boolean;
-        singleton?: boolean;
-        deps?: Token[];
-        async?: boolean;
-    };
-
-    export interface Descriptor {
-        id: symbol;
-        token: Token;
-        factory: (...args: any[]) => any;
-
-        singleton: boolean;
-        deps: Token[] | null;
-        async: boolean;
-    }
-
-    export interface ServiceInfo {
-        service: Descriptor;
-        deps: ServiceInfo[] | null;
-    }
-
-    function getName(token: Token): string {
-        if (typeof token === 'function') {
-            return token.name;
-        }
-        return token.toString();
-    }
-}
-
-namespace Resolvers {
-
-    class FinalTokenResolver {
-        private _map = new Map<Token, Token>();
-        private _directMap = new Map<Token, Token>();
-
-        private _resolveFinalSymbol(detecter: Utils.RecursiveDetecter<Token>, token: Token): Token {
-            let finalSymbol = token;
-            const next = this._map.get(token);
-            if (next !== undefined) {
-                finalSymbol = detecter.with(token, () => {
-                    return this._resolveFinalSymbol(detecter, next);
-                });
-            }
-            this._directMap.set(token, finalSymbol);
-            return finalSymbol;
-        }
-
-        private _resolveSymbol(token: Token): Token | undefined {
-            const ret = this._map.get(token);
-            if (ret === undefined) {
-                return undefined;
-            }
-            const detecter = new Utils.RecursiveDetecter<Token>();
-            return this._resolveFinalSymbol(detecter, ret);
-        }
-
-        getResolvedSymbolToken(token: Token): Token | undefined {
-            let finalSymbol = this._directMap.get(token);
-            if (finalSymbol === undefined) {
-                finalSymbol = this._resolveSymbol(token);
-            }
-            return finalSymbol;
-        }
-
-        redirect(src: Token, dest: Token) {
-            this._map.set(src, dest);
-        }
-    }
-
-    export class ServiceDescriptorResolver {
-        private _tokenResolver = new FinalTokenResolver();
-        map = new Map<Token, Services.Descriptor>();
-
-        resolve(state: Token, required: true): Services.Descriptor;
-        resolve(state: Token, required: false): Services.Descriptor | null;
-        resolve(state: Token, required: boolean): Services.Descriptor | null {
-            let token = this._tokenResolver.getResolvedSymbolToken(state);
-            if (token !== undefined) {
-                const descriptor = this.map.get(token);
-                if (descriptor) {
-                    return descriptor;
+        get(key: K) {
+            for (const map of this._maps) {
+                if (map.has(key)) {
+                    return map.get(key);
                 }
             }
-            if (required) {
-                throw new Error(`cannot resolve token: ${state.toString()}`);
-            }
-            return null;
+            return undefined;
         }
 
-        redirect(src: Token, dest: Token) {
-            this._tokenResolver.redirect(src, dest);
-        }
-    }
-
-    export class ServiceInfoResolver {
-        constructor(private _descriptorResolver: ServiceDescriptorResolver) {
-
-        }
-
-        resolve(state: Token): Services.ServiceInfo | null {
-            const service = this._descriptorResolver.resolve(state, false);
-            if (service) {
-                return this.resolveServiceInfo(new Utils.RecursiveDetecter<Token>(), service);
-            }
-            return null;
-        }
-
-        private resolveServiceInfo(detecter: Utils.RecursiveDetecter<Token>, service: Services.Descriptor)
-            : Services.ServiceInfo {
-            const serviceInfo: Services.ServiceInfo = {
-                service,
-                deps: null
-            };
-            if (service.deps) {
-                const deps = service.deps
-                    .map(z => this._descriptorResolver.resolve(z, true));
-                serviceInfo.deps = detecter.with(service.token, () => {
-                    return deps.map(z => this.resolveServiceInfo(detecter, z))
-                });
-            }
-            return serviceInfo;
-        }
-    }
-
-    export type State = {
-        serviceInfo: Services.ServiceInfo
-    };
-
-    class Cache implements Middleware<State> {
-        private _cache = new Map<symbol, {
-            value: any
-        }>();
-
-        async invoke(context: FlowContext<State>, next: Next): Promise<any> {
-            const service = context.state.serviceInfo.service;
-            let value: any;
-            if (service.singleton) {
-                let node = this._cache.get(service.id);
-                if (!node) {
-                    value = await next();
-                    this._cache.set(service.id, node = {
-                        value
-                    });
-                } else {
-                    value = node.value;
-                }
-            } else {
-                value = await next();
-            }
-            return value;
-        }
-    }
-
-    class Maker implements Middleware<State> {
-        constructor(private _valueResolver: Resolvers.ValueResolver) {
-
-        }
-
-        async invoke(context: FlowContext<State>): Promise<any> {
-            const serviceInfo = context.state.serviceInfo;
-            let value: any;
-            if (serviceInfo.deps) {
-                const args = [];
-                for (const dep of serviceInfo.deps) {
-                    args.push(await this._valueResolver.getService(dep));
-                }
-                value = serviceInfo.service.factory.apply(null, args);
-            } else {
-                value = serviceInfo.service.factory();
-            }
-            if (serviceInfo.service.async) {
-                return await value;
-            }
-            return value;
-        }
-    }
-
-    export class ValueResolver {
-        private _flow = new App<State>();
-
-        constructor(private _serviceInfoResolver: ServiceInfoResolver) {
-            this._flow.use(new Cache());
-            this._flow.use(new Maker(this));
-        }
-
-        resolve<T>(token: Token): Promise<T | null> {
-            const serviceInfo = this._serviceInfoResolver.resolve(token);
-            if (serviceInfo) {
-                return this.getService(serviceInfo);
-            } else {
-                return Promise.resolve(null);
-            }
-        }
-
-        getService(serviceInfo: Services.ServiceInfo): Promise<any> {
-            return this._flow.run({
-                serviceInfo
-            });
+        set(key: K, value: V) {
+            this._maps[0].set(key, value);
         }
     }
 }
 
-class Ioc {
-    private _storage = new Resolvers.ServiceDescriptorResolver();
-    private _valueResolver: Resolvers.ValueResolver;
+class ScopedServiceProvider implements IServiceProvider {
+    constructor(private _services: Utils.ChainMap<any, Service.IServiceInfo>) {
+        this._services.set(Symbols.Cache,
+            new Service.ValueServiceInfo(
+                new Map<Service.IServiceInfo, any>()
+            )
+        );
+    }
 
+    get<V>(key: any): V {
+        const serviceInfo = this._services.get(key);
+        if (serviceInfo) {
+            return <V> serviceInfo.get(this);
+        }
+
+        const resolverServiceInfo = <Service.IServiceInfo>this._services.get(Symbols.MissingResolver);
+        const resolver = <Missing.IMissingResolver> resolverServiceInfo.get(this);
+        return <V> resolver.get(this, key);
+    }
+
+    registerServiceInfo(key: any, serviceInfo: Service.IServiceInfo) {
+        this._services.set(key, serviceInfo);
+    }
+
+    registerValue(key: any, value: any) {
+        this._services.set(key, new Service.ValueServiceInfo(value));
+    }
+
+    register(key: any, factory: Factory, lifetime: Service.LifeTime) {
+        this._services.set(key, new Service.ServiceInfo(factory, lifetime));
+    }
+
+    registerTransient(key: any, factory: Factory) {
+        return this.register(key, factory, Service.LifeTime.Transient);
+    }
+
+    registerScoped(key: any, factory: Factory) {
+        return this.register(key, factory, Service.LifeTime.Scoped);
+    }
+
+    registerSingleton(key: any, factory: Factory) {
+        return this.register(key, factory, Service.LifeTime.Singleton);
+    }
+}
+
+class ServiceProvider extends ScopedServiceProvider {
     constructor() {
-        const serviceInfoResolver = new Resolvers.ServiceInfoResolver(this._storage);
-        this._valueResolver = new Resolvers.ValueResolver(serviceInfoResolver);
-    }
-
-    define<T>(type: ctor<T>, options?: Services.Options): this;
-    define<TS, TI extends TS>(type: ctor<TS>, factory: () => TI, options?: Services.Options) : this;
-    define(name: string | symbol, factory: () => any, options?: Services.Options) : this;
-    define(token: Token, factory?: (() => any) | Services.Options, options?: Services.Options) {
-        if (typeof factory === 'object') {
-            options = factory;
-            factory = undefined;
-        }
-
-        if (!factory) {
-            factory = () => new (token as ctor<any>)();
-        }
-
-        const id = Symbol();
-        const service: Services.Descriptor = {
-            id,
-            token,
-            factory,
-            singleton: false,
-            deps: null,
-            async: false
-        }
-        if (options) {
-            service.singleton = !!options.singleton;
-            service.async = !!options.async;
-            if (options.deps) {
-                service.deps = options.deps;
-            }
-        }
-        this._storage.redirect(token, id);
-        this._storage.map.set(id, service);
-
-        return this;
-    }
-
-    bind(src: Token, dest: Token) {
-        this._storage.redirect(src, dest);
-    }
-
-    get<T>(token: Token): Promise<T | null> {
-        return this._valueResolver.resolve<T>(token);
-    }
-
-    async getRequired<T>(name: Token): Promise<T> {
-        const value = await this.get<any>(name);
-        if (value === null) {
-            throw new Error('no such service.');
-        }
-        return value;
+        super(new Utils.ChainMap());
+        this.registerServiceInfo(Symbols.Provider, new Service.ProviderServiceInfo());
+        this.registerValue(Symbols.RootProvider, this);
+        this.registerValue(Symbols.MissingResolver, new Missing.MissingResolver());
+        // alias
+        this.registerTransient('ioc', ioc => ioc.get(Symbols.Provider));
+        this.registerTransient('provider', ioc => ioc.get(Symbols.Provider));
+        this.registerTransient('service_provider', ioc => ioc.get(Symbols.Provider));
     }
 }
-
-class IocBuilder {
-    use(component: any) {
-
-    }
-
-    useAlias() {
-
-    }
-
-    build() {
-
-    }
-}
-
-(async function() {
-    class A {}
-    class B extends A {}
-    class C {}
-    const ioc = new Ioc();
-    ioc.define(A, () => new B());
-    console.log(await ioc.get(A) instanceof B);
-    ioc.bind('a', A);
-    console.log(await ioc.get('a') instanceof B);
-    console.log(await ioc.get('a') !== await ioc.get('a'));
-    console.log(await ioc.get('b') === null);
-    ioc.define(C);
-    console.log(await ioc.get(C) instanceof C);
-})();
