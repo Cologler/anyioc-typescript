@@ -1,19 +1,20 @@
 "use strict";
 /* Copyright (c) 2018~2999 - Cologler <skyoflw@gmail.com> */
-const Symbols = {
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Symbols = {
     Provider: Symbol('Provider'),
     RootProvider: Symbol('RootProvider'),
     Cache: Symbol('Cache'),
     MissingResolver: Symbol('MissingResolver'),
 };
+var LifeTime;
+(function (LifeTime) {
+    LifeTime[LifeTime["Transient"] = 0] = "Transient";
+    LifeTime[LifeTime["Scoped"] = 1] = "Scoped";
+    LifeTime[LifeTime["Singleton"] = 2] = "Singleton";
+})(LifeTime = exports.LifeTime || (exports.LifeTime = {}));
 var Service;
 (function (Service) {
-    let LifeTime;
-    (function (LifeTime) {
-        LifeTime[LifeTime["Transient"] = 0] = "Transient";
-        LifeTime[LifeTime["Scoped"] = 1] = "Scoped";
-        LifeTime[LifeTime["Singleton"] = 2] = "Singleton";
-    })(LifeTime = Service.LifeTime || (Service.LifeTime = {}));
     class ServiceInfo {
         constructor(_factory, _lifetime) {
             this._factory = _factory;
@@ -25,14 +26,14 @@ var Service;
                 case LifeTime.Transient:
                     return this._factory(provider);
                 case LifeTime.Scoped:
-                    const cache = provider.get(Symbols.Cache);
+                    const cache = provider.get(exports.Symbols.Cache);
                     if (!cache.has(this)) {
                         cache.set(this, this._factory(provider));
                     }
                     return cache.get(this);
                 case LifeTime.Singleton:
                     if (this._cache_value === null) {
-                        provider = provider.get(Symbols.RootProvider);
+                        provider = provider.get(exports.Symbols.RootProvider);
                         this._cache_value = [this._factory(provider)];
                     }
                     return this._cache_value[0];
@@ -64,7 +65,7 @@ var Service;
         }
     }
     Service.GroupedServiceInfo = GroupedServiceInfo;
-})(Service || (Service = {}));
+})(Service = exports.Service || (exports.Service = {}));
 var Missing;
 (function (Missing) {
     class MissingResolver {
@@ -73,7 +74,7 @@ var Missing;
         }
     }
     Missing.MissingResolver = MissingResolver;
-})(Missing || (Missing = {}));
+})(Missing = exports.Missing || (exports.Missing = {}));
 var Utils;
 (function (Utils) {
     class ChainMap {
@@ -92,20 +93,23 @@ var Utils;
         set(key, value) {
             this._maps[0].set(key, value);
         }
+        child() {
+            return new ChainMap(this._maps);
+        }
     }
     Utils.ChainMap = ChainMap;
 })(Utils || (Utils = {}));
 class ScopedServiceProvider {
     constructor(_services) {
         this._services = _services;
-        this._services.set(Symbols.Cache, new Service.ValueServiceInfo(new Map()));
+        this._services.set(exports.Symbols.Cache, new Service.ValueServiceInfo(new Map()));
     }
     get(key) {
         const serviceInfo = this._services.get(key);
         if (serviceInfo) {
             return serviceInfo.get(this);
         }
-        const resolverServiceInfo = this._services.get(Symbols.MissingResolver);
+        const resolverServiceInfo = this._services.get(exports.Symbols.MissingResolver);
         const resolver = resolverServiceInfo.get(this);
         return resolver.get(this, key);
     }
@@ -119,24 +123,29 @@ class ScopedServiceProvider {
         this._services.set(key, new Service.ServiceInfo(factory, lifetime));
     }
     registerTransient(key, factory) {
-        return this.register(key, factory, Service.LifeTime.Transient);
+        return this.register(key, factory, LifeTime.Transient);
     }
     registerScoped(key, factory) {
-        return this.register(key, factory, Service.LifeTime.Scoped);
+        return this.register(key, factory, LifeTime.Scoped);
     }
     registerSingleton(key, factory) {
-        return this.register(key, factory, Service.LifeTime.Singleton);
+        return this.register(key, factory, LifeTime.Singleton);
+    }
+    scope() {
+        return new ScopedServiceProvider(this._services.child());
     }
 }
 class ServiceProvider extends ScopedServiceProvider {
     constructor() {
         super(new Utils.ChainMap());
-        this.registerServiceInfo(Symbols.Provider, new Service.ProviderServiceInfo());
-        this.registerValue(Symbols.RootProvider, this);
-        this.registerValue(Symbols.MissingResolver, new Missing.MissingResolver());
+        this.registerServiceInfo(exports.Symbols.Provider, new Service.ProviderServiceInfo());
+        this.registerValue(exports.Symbols.RootProvider, this);
+        this.registerValue(exports.Symbols.MissingResolver, new Missing.MissingResolver());
         // alias
-        this.registerTransient('ioc', ioc => ioc.get(Symbols.Provider));
-        this.registerTransient('provider', ioc => ioc.get(Symbols.Provider));
-        this.registerTransient('service_provider', ioc => ioc.get(Symbols.Provider));
+        this.registerTransient('ioc', ioc => ioc.get(exports.Symbols.Provider));
+        this.registerTransient('provider', ioc => ioc.get(exports.Symbols.Provider));
+        this.registerTransient('service_provider', ioc => ioc.get(exports.Symbols.Provider));
     }
 }
+exports.ServiceProvider = ServiceProvider;
+//# sourceMappingURL=anyioc.js.map

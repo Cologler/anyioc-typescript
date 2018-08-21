@@ -1,24 +1,26 @@
 /* Copyright (c) 2018~2999 - Cologler <skyoflw@gmail.com> */
 
-const Symbols = {
+export const Symbols = {
     Provider: Symbol('Provider'),
     RootProvider: Symbol('RootProvider'),
     Cache: Symbol('Cache'),
     MissingResolver: Symbol('MissingResolver'),
 }
 
-interface IServiceProvider {
+export interface IServiceProvider {
     get<V>(key: any): V;
+    scope(): IServiceProvider;
 }
 
-type Factory = (provider: IServiceProvider) => any;
+export type Factory = (provider: IServiceProvider) => any;
 
-namespace Service {
-    export enum LifeTime {
-        Transient = 0,
-        Scoped,
-        Singleton,
-    }
+export enum LifeTime {
+    Transient = 0,
+    Scoped,
+    Singleton,
+}
+
+export namespace Service {
 
     export interface IServiceInfo {
         get(provider: IServiceProvider): any;
@@ -77,7 +79,7 @@ namespace Service {
     }
 }
 
-namespace Missing {
+export namespace Missing {
     export interface IMissingResolver {
         get(provider: IServiceProvider, key: any): any;
     }
@@ -110,6 +112,10 @@ namespace Utils {
         set(key: K, value: V) {
             this._maps[0].set(key, value);
         }
+
+        child(): ChainMap<K, V> {
+            return new ChainMap(this._maps);
+        }
     }
 }
 
@@ -141,24 +147,28 @@ class ScopedServiceProvider implements IServiceProvider {
         this._services.set(key, new Service.ValueServiceInfo(value));
     }
 
-    register(key: any, factory: Factory, lifetime: Service.LifeTime) {
+    register(key: any, factory: Factory, lifetime: LifeTime) {
         this._services.set(key, new Service.ServiceInfo(factory, lifetime));
     }
 
     registerTransient(key: any, factory: Factory) {
-        return this.register(key, factory, Service.LifeTime.Transient);
+        return this.register(key, factory, LifeTime.Transient);
     }
 
     registerScoped(key: any, factory: Factory) {
-        return this.register(key, factory, Service.LifeTime.Scoped);
+        return this.register(key, factory, LifeTime.Scoped);
     }
 
     registerSingleton(key: any, factory: Factory) {
-        return this.register(key, factory, Service.LifeTime.Singleton);
+        return this.register(key, factory, LifeTime.Singleton);
+    }
+
+    scope(): IServiceProvider {
+        return new ScopedServiceProvider(this._services.child());
     }
 }
 
-class ServiceProvider extends ScopedServiceProvider {
+export class ServiceProvider extends ScopedServiceProvider {
     constructor() {
         super(new Utils.ChainMap());
         this.registerServiceInfo(Symbols.Provider, new Service.ProviderServiceInfo());
