@@ -5,8 +5,87 @@ export declare const Symbols: {
     MissingResolver: symbol;
 };
 export interface IServiceProvider {
+    /**
+     * resolve value by key.
+     *
+     * @template V
+     * @param {*} key
+     * @returns {V}
+     * @memberof IServiceProvider
+     */
     get<V>(key: any): V;
+    /**
+     * create a new scoped `IServiceProvider`.
+     *
+     * @returns {IServiceProvider}
+     * @memberof IServiceProvider
+     */
     scope(): IServiceProvider;
+    /**
+     * register a `Service.IServiceInfo` into the container.
+     *
+     * @param {*} key
+     * @param {Services.IServiceInfo} serviceInfo
+     * @memberof IServiceProvider
+     */
+    registerServiceInfo(key: any, serviceInfo: IServiceInfo): void;
+    /**
+     * register a value into the container.
+     *
+     * value always be singleton.
+     *
+     * @param {*} key
+     * @param {*} value
+     * @memberof IServiceProvider
+     */
+    registerValue(key: any, value: any): void;
+    /**
+     * register a factory into the container.
+     *
+     * @param {*} key
+     * @param {Factory} factory
+     * @param {LifeTime} lifetime
+     * @memberof IServiceProvider
+     */
+    register(key: any, factory: Factory, lifetime: LifeTime): void;
+    /**
+     * register a transient factory into the container.
+     *
+     * transient mean the instance will never cache.
+     *
+     * @param {*} key
+     * @param {Factory} factory
+     * @memberof IServiceProvider
+     */
+    registerTransient(key: any, factory: Factory): void;
+    /**
+     * register a scoped factory into the container.
+     *
+     * scoped mean the instance is singleton in each scoped `IServiceProvider`.
+     *
+     * @param {*} key
+     * @param {Factory} factory
+     * @memberof IServiceProvider
+     */
+    registerScoped(key: any, factory: Factory): void;
+    /**
+     * register a singleton factory into the container.
+     *
+     * @param {*} key
+     * @param {Factory} factory
+     * @memberof IServiceProvider
+     */
+    registerSingleton(key: any, factory: Factory): void;
+    /**
+     * register a group keys into the container.
+     *
+     * when you resolve the `key`, will return a array by `keys`.
+     *
+     * @param {*} key
+     * @param {any[]} keys
+     * @memberof IServiceProvider
+     */
+    registerGroup(key: any, keys: any[]): void;
 }
 export declare type Factory = (provider: IServiceProvider) => any;
 export declare enum LifeTime {
@@ -14,30 +93,15 @@ export declare enum LifeTime {
     Scoped = 1,
     Singleton = 2
 }
-export declare namespace Service {
-    interface IServiceInfo {
-        get(provider: IServiceProvider): any;
-    }
-    class ServiceInfo implements IServiceInfo {
-        private _factory;
-        private _lifetime;
-        private _cache_value;
-        constructor(_factory: Factory, _lifetime: LifeTime);
-        get(provider: IServiceProvider): any;
-    }
-    class ProviderServiceInfo implements IServiceInfo {
-        get(provider: IServiceProvider): IServiceProvider;
-    }
-    class ValueServiceInfo implements IServiceInfo {
-        private _value;
-        constructor(_value: any);
-        get(provider: IServiceProvider): any;
-    }
-    class GroupedServiceInfo implements IServiceInfo {
-        private _keys;
-        constructor(_keys: any[]);
-        get(provider: IServiceProvider): {}[];
-    }
+export interface IServiceInfo {
+    /**
+     * resolve value with `IServiceProvider`
+     *
+     * @param {IServiceProvider} provider
+     * @returns {*}
+     * @memberof IServiceInfo
+     */
+    get(provider: IServiceProvider): any;
 }
 export declare namespace Missing {
     interface IMissingResolver {
@@ -58,9 +122,9 @@ declare namespace Utils {
 }
 declare class ScopedServiceProvider implements IServiceProvider {
     private _services;
-    constructor(_services: Utils.ChainMap<any, Service.IServiceInfo>);
+    constructor(_services: Utils.ChainMap<any, IServiceInfo>);
     get<V>(key: any): V;
-    registerServiceInfo(key: any, serviceInfo: Service.IServiceInfo): void;
+    registerServiceInfo(key: any, serviceInfo: IServiceInfo): void;
     registerValue(key: any, value: any): void;
     register(key: any, factory: Factory, lifetime: LifeTime): void;
     registerTransient(key: any, factory: Factory): void;
@@ -69,6 +133,13 @@ declare class ScopedServiceProvider implements IServiceProvider {
     registerGroup(key: any, keys: any[]): void;
     scope(): IServiceProvider;
 }
+/**
+ * the main class for anyioc.
+ *
+ * @export
+ * @class ServiceProvider
+ * @extends {ScopedServiceProvider}
+ */
 export declare class ServiceProvider extends ScopedServiceProvider {
     constructor();
 }

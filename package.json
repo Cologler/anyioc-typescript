@@ -16,7 +16,9 @@
     "typescript": "^3.0.1"
   },
   "scripts": {
-    "test": "ts-mocha *.spec.ts"
+    "test": "ts-mocha *.spec.ts",
+    "prepare": "tsc",
+    "compile": "npm test && tsc && webpack"
   },
   "keywords": [
     "ioc"

@@ -278,6 +278,5 @@ export class ServiceProvider extends ScopedServiceProvider {
         // alias
         this.registerTransient('ioc', ioc => ioc.get(Symbols.Provider));
         this.registerTransient('provider', ioc => ioc.get(Symbols.Provider));
-        this.registerTransient('service_provider', ioc => ioc.get(Symbols.Provider));
     }
 }

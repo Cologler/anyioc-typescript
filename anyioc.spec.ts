@@ -1,6 +1,6 @@
 import assert from "assert";
 
-import { ServiceProvider  } from "./anyioc";
+import { ServiceProvider } from "./anyioc";
 
 describe('anyioc', function() {
 

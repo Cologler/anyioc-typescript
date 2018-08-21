@@ -110,8 +110,8 @@ var LifeTime;
     LifeTime[LifeTime["Scoped"] = 1] = "Scoped";
     LifeTime[LifeTime["Singleton"] = 2] = "Singleton";
 })(LifeTime = exports.LifeTime || (exports.LifeTime = {}));
-var Service;
-(function (Service) {
+var Services;
+(function (Services) {
     class ServiceInfo {
         constructor(_factory, _lifetime) {
             this._factory = _factory;
@@ -137,13 +137,13 @@ var Service;
             }
         }
     }
-    Service.ServiceInfo = ServiceInfo;
+    Services.ServiceInfo = ServiceInfo;
     class ProviderServiceInfo {
         get(provider) {
             return provider;
         }
     }
-    Service.ProviderServiceInfo = ProviderServiceInfo;
+    Services.ProviderServiceInfo = ProviderServiceInfo;
     class ValueServiceInfo {
         constructor(_value) {
             this._value = _value;
@@ -152,7 +152,7 @@ var Service;
             return this._value;
         }
     }
-    Service.ValueServiceInfo = ValueServiceInfo;
+    Services.ValueServiceInfo = ValueServiceInfo;
     class GroupedServiceInfo {
         constructor(_keys) {
             this._keys = _keys;
@@ -161,13 +161,13 @@ var Service;
             return this._keys.map(key => provider.get(key));
         }
     }
-    Service.GroupedServiceInfo = GroupedServiceInfo;
-})(Service = exports.Service || (exports.Service = {}));
+    Services.GroupedServiceInfo = GroupedServiceInfo;
+})(Services || (Services = {}));
 var Missing;
 (function (Missing) {
     class MissingResolver {
         get(provider, key) {
-            throw new Error('ServiceNotFoundError');
+            return undefined;
         }
     }
     Missing.MissingResolver = MissingResolver;
@@ -199,7 +199,7 @@ var Utils;
 class ScopedServiceProvider {
     constructor(_services) {
         this._services = _services;
-        this._services.set(exports.Symbols.Cache, new Service.ValueServiceInfo(new Map()));
+        this.registerValue(exports.Symbols.Cache, new Map());
     }
     get(key) {
         const serviceInfo = this._services.get(key);
@@ -214,10 +214,10 @@ class ScopedServiceProvider {
         this._services.set(key, serviceInfo);
     }
     registerValue(key, value) {
-        this._services.set(key, new Service.ValueServiceInfo(value));
+        this._services.set(key, new Services.ValueServiceInfo(value));
     }
     register(key, factory, lifetime) {
-        this._services.set(key, new Service.ServiceInfo(factory, lifetime));
+        this._services.set(key, new Services.ServiceInfo(factory, lifetime));
     }
     registerTransient(key, factory) {
         return this.register(key, factory, LifeTime.Transient);
@@ -228,20 +228,29 @@ class ScopedServiceProvider {
     registerSingleton(key, factory) {
         return this.register(key, factory, LifeTime.Singleton);
     }
+    registerGroup(key, keys) {
+        this._services.set(key, new Services.GroupedServiceInfo(keys));
+    }
     scope() {
         return new ScopedServiceProvider(this._services.child());
     }
 }
+/**
+ * the main class for anyioc.
+ *
+ * @export
+ * @class ServiceProvider
+ * @extends {ScopedServiceProvider}
+ */
 class ServiceProvider extends ScopedServiceProvider {
     constructor() {
         super(new Utils.ChainMap());
-        this.registerServiceInfo(exports.Symbols.Provider, new Service.ProviderServiceInfo());
+        this.registerServiceInfo(exports.Symbols.Provider, new Services.ProviderServiceInfo());
         this.registerValue(exports.Symbols.RootProvider, this);
         this.registerValue(exports.Symbols.MissingResolver, new Missing.MissingResolver());
         // alias
         this.registerTransient('ioc', ioc => ioc.get(exports.Symbols.Provider));
         this.registerTransient('provider', ioc => ioc.get(exports.Symbols.Provider));
-        this.registerTransient('service_provider', ioc => ioc.get(exports.Symbols.Provider));
     }
 }
 exports.ServiceProvider = ServiceProvider;
