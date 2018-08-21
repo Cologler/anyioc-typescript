@@ -1,5 +1,7 @@
 # anyioc
 
+[![](https://data.jsdelivr.com/v1/package/gh/Cologler/anyioc-typescript/badge)](https://www.jsdelivr.com/package/gh/Cologler/anyioc-typescript)
+
 Another simple ioc framework for javascript/typescript.
 
 ## Usage
