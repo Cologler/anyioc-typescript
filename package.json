@@ -1,12 +1,10 @@
 {
   "name": "anyioc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "main": "./dist/anyioc.js",
   "jsdelivr": "./dist/anyioc.bundle.js",
-  "dependencies": {
-    "anyflow": "^0.1.8"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.7.1",
@@ -24,5 +22,16 @@
     "ioc"
   ],
   "author": "Cologler",
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "dist"
+  ],
+  "homepage": "https://github.com/Cologler/anyioc-typescript",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cologler/anyioc-typescript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Cologler/anyioc-typescript/issues"
+  }
 }
