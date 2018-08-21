@@ -259,4 +259,4 @@ exports.ServiceProvider = ServiceProvider;
 /***/ })
 
 /******/ });
-//# sourceMappingURL=anyioc.bundle.js.map
+//# sourceMappingURL=anyioc.js.map

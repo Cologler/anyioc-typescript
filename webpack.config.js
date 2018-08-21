@@ -3,8 +3,8 @@ module.exports = {
   mode: 'development',
   entry: path.join(__dirname, 'dist', 'anyioc.js'),
   output: {
-    filename: 'anyioc.bundle.js',
-    path: path.resolve(__dirname, 'dist'),
+    filename: 'anyioc.js',
+    path: path.resolve(__dirname, 'dist.browser'),
     library: 'anyioc'
   },
   module: {
