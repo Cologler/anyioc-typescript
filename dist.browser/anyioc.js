@@ -163,15 +163,15 @@ var Services;
     }
     Services.GroupedServiceInfo = GroupedServiceInfo;
 })(Services || (Services = {}));
-var Missing;
-(function (Missing) {
-    class MissingResolver {
+var Resolvers;
+(function (Resolvers) {
+    class EmptyServiceInfoResolver {
         get(provider, key) {
             return undefined;
         }
     }
-    Missing.MissingResolver = MissingResolver;
-})(Missing = exports.Missing || (exports.Missing = {}));
+    Resolvers.EmptyServiceInfoResolver = EmptyServiceInfoResolver;
+})(Resolvers = exports.Resolvers || (exports.Resolvers = {}));
 var Utils;
 (function (Utils) {
     class ChainMap {
@@ -202,13 +202,16 @@ class ScopedServiceProvider {
         this.registerValue(exports.Symbols.Cache, new Map());
     }
     get(key) {
-        const serviceInfo = this._services.get(key);
+        let serviceInfo = this._services.get(key);
         if (serviceInfo) {
             return serviceInfo.get(this);
         }
         const resolverServiceInfo = this._services.get(exports.Symbols.MissingResolver);
         const resolver = resolverServiceInfo.get(this);
-        return resolver.get(this, key);
+        serviceInfo = resolver.get(this, key);
+        if (serviceInfo) {
+            return serviceInfo.get(this);
+        }
     }
     registerServiceInfo(key, serviceInfo) {
         this._services.set(key, serviceInfo);
@@ -247,7 +250,7 @@ class ServiceProvider extends ScopedServiceProvider {
         super(new Utils.ChainMap());
         this.registerServiceInfo(exports.Symbols.Provider, new Services.ProviderServiceInfo());
         this.registerValue(exports.Symbols.RootProvider, this);
-        this.registerValue(exports.Symbols.MissingResolver, new Missing.MissingResolver());
+        this.registerValue(exports.Symbols.MissingResolver, new Resolvers.EmptyServiceInfoResolver());
         // alias
         this.registerTransient('ioc', ioc => ioc.get(exports.Symbols.Provider));
         this.registerTransient('provider', ioc => ioc.get(exports.Symbols.Provider));

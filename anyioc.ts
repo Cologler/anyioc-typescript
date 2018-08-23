@@ -16,7 +16,7 @@ export interface IServiceProvider {
      * @returns {V}
      * @memberof IServiceProvider
      */
-    get<V>(key: any): V;
+    get<V>(key: any): V | undefined;
 
     /**
      * create a new scoped `IServiceProvider`.
@@ -132,7 +132,7 @@ namespace Services {
                     return this._factory(provider);
 
                 case LifeTime.Scoped:
-                    const cache = provider.get<Map<IServiceInfo, any>>(Symbols.Cache);
+                    const cache = <Map<IServiceInfo, any>> provider.get(Symbols.Cache);
                     if (!cache.has(this)) {
                         cache.set(this, this._factory(provider));
                     }
@@ -140,7 +140,7 @@ namespace Services {
 
                 case LifeTime.Singleton:
                     if (this._cache_value === null) {
-                        provider = provider.get<IServiceProvider>(Symbols.RootProvider);
+                        provider = <IServiceProvider> provider.get(Symbols.RootProvider);
                         this._cache_value = [this._factory(provider)];
                     }
                     return this._cache_value[0];
@@ -173,13 +173,13 @@ namespace Services {
     }
 }
 
-export namespace Missing {
-    export interface IMissingResolver {
-        get(provider: IServiceProvider, key: any): any;
+export namespace Resolvers {
+    export interface IServiceInfoResolver {
+        get(provider: IServiceProvider, key: any): IServiceInfo | undefined;
     }
 
-    export class MissingResolver implements IMissingResolver {
-        get(provider: IServiceProvider, key: any): any {
+    export class EmptyServiceInfoResolver implements IServiceInfoResolver {
+        get(provider: IServiceProvider, key: any): IServiceInfo | undefined {
             return undefined;
         }
     }
@@ -218,15 +218,18 @@ class ScopedServiceProvider implements IServiceProvider {
         this.registerValue(Symbols.Cache, new Map<IServiceInfo, any>());
     }
 
-    get<V>(key: any): V {
-        const serviceInfo = this._services.get(key);
+    get<V>(key: any): V | undefined {
+        let serviceInfo = this._services.get(key);
         if (serviceInfo) {
             return <V> serviceInfo.get(this);
         }
 
         const resolverServiceInfo = <IServiceInfo>this._services.get(Symbols.MissingResolver);
-        const resolver = <Missing.IMissingResolver> resolverServiceInfo.get(this);
-        return <V> resolver.get(this, key);
+        const resolver = <Resolvers.IServiceInfoResolver> resolverServiceInfo.get(this);
+        serviceInfo = <IServiceInfo> resolver.get(this, key);
+        if (serviceInfo) {
+            return <V> serviceInfo.get(this);
+        }
     }
 
     registerServiceInfo(key: any, serviceInfo: IServiceInfo) {
@@ -274,7 +277,7 @@ export class ServiceProvider extends ScopedServiceProvider {
         super(new Utils.ChainMap());
         this.registerServiceInfo(Symbols.Provider, new Services.ProviderServiceInfo());
         this.registerValue(Symbols.RootProvider, this);
-        this.registerValue(Symbols.MissingResolver, new Missing.MissingResolver());
+        this.registerValue(Symbols.MissingResolver, new Resolvers.EmptyServiceInfoResolver());
         // alias
         this.registerTransient('ioc', ioc => ioc.get(Symbols.Provider));
         this.registerTransient('provider', ioc => ioc.get(Symbols.Provider));

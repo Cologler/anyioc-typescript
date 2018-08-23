@@ -13,7 +13,7 @@ export interface IServiceProvider {
      * @returns {V}
      * @memberof IServiceProvider
      */
-    get<V>(key: any): V;
+    get<V>(key: any): V | undefined;
     /**
      * create a new scoped `IServiceProvider`.
      *
@@ -103,12 +103,12 @@ export interface IServiceInfo {
      */
     get(provider: IServiceProvider): any;
 }
-export declare namespace Missing {
-    interface IMissingResolver {
-        get(provider: IServiceProvider, key: any): any;
+export declare namespace Resolvers {
+    interface IServiceInfoResolver {
+        get(provider: IServiceProvider, key: any): IServiceInfo | undefined;
     }
-    class MissingResolver implements IMissingResolver {
-        get(provider: IServiceProvider, key: any): any;
+    class EmptyServiceInfoResolver implements IServiceInfoResolver {
+        get(provider: IServiceProvider, key: any): IServiceInfo | undefined;
     }
 }
 declare namespace Utils {
@@ -123,7 +123,7 @@ declare namespace Utils {
 declare class ScopedServiceProvider implements IServiceProvider {
     private _services;
     constructor(_services: Utils.ChainMap<any, IServiceInfo>);
-    get<V>(key: any): V;
+    get<V>(key: any): V | undefined;
     registerServiceInfo(key: any, serviceInfo: IServiceInfo): void;
     registerValue(key: any, value: any): void;
     register(key: any, factory: Factory, lifetime: LifeTime): void;
