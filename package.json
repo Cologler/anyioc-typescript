@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "",
   "main": "./dist/anyioc.js",
-  "jsdelivr": "./dist/anyioc.bundle.js",
+  "jsdelivr": "./dist.browser/anyioc.js",
   "dependencies": {},
   "devDependencies": {
     "@types/mocha": "^5.2.5",
