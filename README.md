@@ -4,6 +4,18 @@
 
 Another simple ioc framework for javascript/typescript.
 
+## Install
+
+### for Node
+
+``` cmd
+npm install anyioc
+```
+
+### for Browser
+
+open CDN and use file `./dist.browser/anyioc.js`.
+
 ## Usage
 
 ``` typescript
