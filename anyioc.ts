@@ -283,3 +283,5 @@ export class ServiceProvider extends ScopedServiceProvider {
         this.registerTransient('provider', ioc => ioc.get(Symbols.Provider));
     }
 }
+
+export const ioc = new ServiceProvider();
