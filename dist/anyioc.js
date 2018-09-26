@@ -116,6 +116,13 @@ class ScopedServiceProvider {
             return serviceInfo.get(this);
         }
     }
+    getRequired(key) {
+        const value = this.get(key);
+        if (value === undefined) {
+            throw new Error('unable to resolve the service');
+        }
+        return value;
+    }
     registerServiceInfo(key, serviceInfo) {
         this._services.set(key, serviceInfo);
     }

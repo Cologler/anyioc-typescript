@@ -15,6 +15,16 @@ export interface IServiceProvider {
      */
     get<V>(key: any): V | undefined;
     /**
+     * resolve value by key.
+     * raise Error when key is not exists.
+     *
+     * @template V
+     * @param {*} key
+     * @returns {V}
+     * @memberof IServiceProvider
+     */
+    getRequired<V>(key: any): V;
+    /**
      * create a new scoped `IServiceProvider`.
      *
      * @returns {IServiceProvider}
@@ -124,6 +134,7 @@ declare class ScopedServiceProvider implements IServiceProvider {
     private _services;
     constructor(_services: Utils.ChainMap<any, IServiceInfo>);
     get<V>(key: any): V | undefined;
+    getRequired<V>(key: any): V;
     registerServiceInfo(key: any, serviceInfo: IServiceInfo): void;
     registerValue(key: any, value: any): void;
     register(key: any, factory: Factory, lifetime: LifeTime): void;
