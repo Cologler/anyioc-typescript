@@ -143,5 +143,6 @@ declare class ScopedServiceProvider implements IServiceProvider {
 export declare class ServiceProvider extends ScopedServiceProvider {
     constructor();
 }
+export declare const ioc: ServiceProvider;
 export {};
 //# sourceMappingURL=anyioc.d.ts.map

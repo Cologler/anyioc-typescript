@@ -160,4 +160,5 @@ class ServiceProvider extends ScopedServiceProvider {
     }
 }
 exports.ServiceProvider = ServiceProvider;
+exports.ioc = new ServiceProvider();
 //# sourceMappingURL=anyioc.js.map
