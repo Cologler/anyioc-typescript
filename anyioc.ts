@@ -19,6 +19,17 @@ export interface IServiceProvider {
     get<V>(key: any): V | undefined;
 
     /**
+     * resolve value by key.
+     * raise Error when key is not exists.
+     *
+     * @template V
+     * @param {*} key
+     * @returns {V}
+     * @memberof IServiceProvider
+     */
+    getRequired<V>(key: any): V;
+
+    /**
      * create a new scoped `IServiceProvider`.
      *
      * @returns {IServiceProvider}
@@ -230,6 +241,14 @@ class ScopedServiceProvider implements IServiceProvider {
         if (serviceInfo) {
             return <V> serviceInfo.get(this);
         }
+    }
+
+    getRequired<V>(key: any): V {
+        const value = this.get<V>(key);
+        if (value === undefined) {
+            throw new Error('unable to resolve the service');
+        }
+        return value;
     }
 
     registerServiceInfo(key: any, serviceInfo: IServiceInfo) {
