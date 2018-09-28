@@ -199,9 +199,11 @@ var Utils;
 class ScopedServiceProvider {
     constructor(_services) {
         this._services = _services;
+        this._getStackSet = new Set();
+        this._getStackArray = [];
         this.registerValue(exports.Symbols.Cache, new Map());
     }
-    get(key) {
+    _getInternal(key) {
         let serviceInfo = this._services.get(key);
         if (serviceInfo) {
             return serviceInfo.get(this);
@@ -211,6 +213,21 @@ class ScopedServiceProvider {
         serviceInfo = resolver.get(this, key);
         if (serviceInfo) {
             return serviceInfo.get(this);
+        }
+    }
+    get(key) {
+        if (this._getStackSet.has(key)) {
+            const chain = [...this._getStackArray, key].join(' => ');
+            throw new Error(`Recursive detected. Chain: ${chain}`);
+        }
+        this._getStackSet.add(key);
+        this._getStackArray.push(key);
+        try {
+            return this._getInternal(key);
+        }
+        finally {
+            this._getStackSet.delete(key);
+            this._getStackArray.pop();
         }
     }
     getRequired(key) {

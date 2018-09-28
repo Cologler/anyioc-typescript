@@ -132,7 +132,10 @@ declare namespace Utils {
 }
 declare class ScopedServiceProvider implements IServiceProvider {
     private _services;
+    private _getStackSet;
+    private _getStackArray;
     constructor(_services: Utils.ChainMap<any, IServiceInfo>);
+    private _getInternal;
     get<V>(key: any): V | undefined;
     getRequired<V>(key: any): V;
     registerServiceInfo(key: any, serviceInfo: IServiceInfo): void;

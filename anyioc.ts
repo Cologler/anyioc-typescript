@@ -225,11 +225,14 @@ namespace Utils {
 }
 
 class ScopedServiceProvider implements IServiceProvider {
+    private _getStackSet: Set<any> = new Set();
+    private _getStackArray: Array<any> = [];
+
     constructor(private _services: Utils.ChainMap<any, IServiceInfo>) {
         this.registerValue(Symbols.Cache, new Map<IServiceInfo, any>());
     }
 
-    get<V>(key: any): V | undefined {
+    private _getInternal<V>(key: any): V | undefined {
         let serviceInfo = this._services.get(key);
         if (serviceInfo) {
             return <V> serviceInfo.get(this);
@@ -240,6 +243,23 @@ class ScopedServiceProvider implements IServiceProvider {
         serviceInfo = <IServiceInfo> resolver.get(this, key);
         if (serviceInfo) {
             return <V> serviceInfo.get(this);
+        }
+    }
+
+    get<V>(key: any): V | undefined {
+        if (this._getStackSet.has(key)) {
+            const chain = [...this._getStackArray, key].join(' => ');
+            throw new Error(`Recursive detected. Chain: ${chain}`);
+        }
+
+        this._getStackSet.add(key);
+        this._getStackArray.push(key);
+
+        try {
+            return this._getInternal(key);
+        } finally {
+            this._getStackSet.delete(key);
+            this._getStackArray.pop();
         }
     }
 

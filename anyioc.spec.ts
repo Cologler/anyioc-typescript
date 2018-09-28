@@ -133,12 +133,31 @@ describe('anyioc', function() {
         });
 
         describe('#value', function() {
-
             it('should can resolve by value', function() {
                 const provider = new ServiceProvider();
                 provider.registerValue(1, 2);
                 assert.strictEqual(provider.get(1), 2);
             })
+        });
+
+        describe('#get()~recursive', function() {
+            it('should raise a error', function() {
+                const provider = new ServiceProvider();
+                provider.registerTransient(1, () => provider.get(2));
+                provider.registerTransient(2, () => provider.get(3));
+                provider.registerTransient(3, () => provider.get(4));
+                provider.registerTransient(4, () => provider.get(5));
+                provider.registerTransient(5, () => provider.get(1));
+                assert.throws(() => {
+                    provider.get(3);
+                }, (err) => {
+                    assert.strictEqual(err instanceof Error, true);
+                    assert.strictEqual(err.message,
+                        'Recursive detected. Chain: 3 => 4 => 5 => 1 => 2 => 3'
+                    );
+                    return true;
+                });
+            });
         });
     });
 
