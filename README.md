@@ -1,5 +1,7 @@
 # anyioc
 
+[![Build Status](https://travis-ci.com/Cologler/anyioc-typescript.svg?branch=master)](https://travis-ci.com/Cologler/anyioc-typescript)
+[![npm](https://img.shields.io/npm/v/anyioc.svg)](https://www.npmjs.com/package/anyioc)
 [![](https://data.jsdelivr.com/v1/package/gh/Cologler/anyioc-typescript/badge)](https://www.jsdelivr.com/package/gh/Cologler/anyioc-typescript)
 
 Another simple ioc framework for javascript/typescript.
