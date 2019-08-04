@@ -134,7 +134,8 @@ namespace Services {
     export class ServiceInfo implements IServiceInfo {
         private _cache_value: [any] | null = null;
 
-        constructor(private _factory: Factory, private _lifetime: LifeTime) {
+        constructor(private _factory: Factory, private _lifetime: LifeTime,
+            private _provider: IServiceProvider) {
         }
 
         get(provider: IServiceProvider): any {
@@ -151,8 +152,7 @@ namespace Services {
 
                 case LifeTime.Singleton:
                     if (this._cache_value === null) {
-                        provider = <IServiceProvider> provider.get(Symbols.RootProvider);
-                        this._cache_value = [this._factory(provider)];
+                        this._cache_value = [this._factory(this._provider)];
                     }
                     return this._cache_value[0];
             }
@@ -280,7 +280,7 @@ class ScopedServiceProvider implements IServiceProvider {
     }
 
     register(key: any, factory: Factory, lifetime: LifeTime) {
-        this._services.set(key, new Services.ServiceInfo(factory, lifetime));
+        this._services.set(key, new Services.ServiceInfo(factory, lifetime, this));
     }
 
     registerTransient(key: any, factory: Factory) {
