@@ -108,6 +108,14 @@ export interface IServiceProvider {
      * @memberof IServiceProvider
      */
     registerGroup(key: any, keys: any[]): void;
+
+    /**
+     * bind a key to another key (target) as alias.
+     * @param {*} key
+     * @param {*} target
+     * @memberof IServiceProvider
+     */
+    registerBind(key: any, target: any): void;
 }
 
 export type Factory = (provider: IServiceProvider) => any;
@@ -308,11 +316,6 @@ class ScopedServiceProvider implements IServiceProvider {
         this._services.set(key, new Services.GroupedServiceInfo(keys));
     }
 
-    /**
-     * bind a key to another key (target) as alias.
-     * @param key
-     * @param target
-     */
     registerBind(key: any, target: any) {
         this._services.set(key, new Services.BindedServiceInfo(target));
     }
