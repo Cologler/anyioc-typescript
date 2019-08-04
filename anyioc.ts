@@ -182,6 +182,15 @@ namespace Services {
             return this._keys.map(key => provider.get(key));
         }
     }
+
+    export class BindedServiceInfo implements IServiceInfo {
+        constructor(private _targetKey: any) {
+        }
+
+        get(provider: IServiceProvider) {
+            return provider.get(this._targetKey);
+        }
+    }
 }
 
 export namespace Resolvers {
@@ -297,6 +306,15 @@ class ScopedServiceProvider implements IServiceProvider {
 
     registerGroup(key: any, keys: any[]) {
         this._services.set(key, new Services.GroupedServiceInfo(keys));
+    }
+
+    /**
+     * bind a key to another key (target) as alias.
+     * @param key
+     * @param target
+     */
+    registerBind(key: any, target: any) {
+        this._services.set(key, new Services.BindedServiceInfo(target));
     }
 
     scope(): IServiceProvider {

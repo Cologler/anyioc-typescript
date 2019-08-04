@@ -140,6 +140,15 @@ describe('anyioc', function() {
             })
         });
 
+        describe('#bind', function() {
+            it('should can resolve by bind', function() {
+                const provider = new ServiceProvider();
+                provider.registerValue(1, 2);
+                provider.registerBind(3, 1);
+                assert.strictEqual(provider.get(3), 2);
+            })
+        });
+
         describe('#get()~recursive', function() {
             it('should raise a error', function() {
                 const provider = new ServiceProvider();
