@@ -2,8 +2,8 @@
   "name": "anyioc",
   "version": "0.2.3",
   "description": "",
-  "main": "./dist/anyioc.js",
-  "jsdelivr": "./dist.browser/anyioc.js",
+  "main": "dist/anyioc.js",
+  "browser": "dist.browser/anyioc.js",
   "devDependencies": {
     "@types/mocha": "^7.0.2",
     "@types/node": "^13.13.11",
