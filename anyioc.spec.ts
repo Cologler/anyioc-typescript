@@ -7,6 +7,12 @@ describe('anyioc', function() {
     describe('ServiceProvider', function() {
         describe('#get()', function() {
 
+            it('should return value of match any', function() {
+                const provider = new ServiceProvider();
+                provider.registerSingleton('any', () => 15);
+                assert.strictEqual(provider.get('any'), 15);
+            })
+
             it('should return undefined on some not exists value', function() {
                 const provider = new ServiceProvider();
                 assert.strictEqual(provider.get('any'), undefined);
