@@ -16,7 +16,7 @@ npm install anyioc
 
 ### for Browser
 
-open CDN and use file `./dist.browser/anyioc.js`.
+Use packed file `dist.browser/anyioc.js`.
 
 ## Usage
 
