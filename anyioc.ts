@@ -380,6 +380,10 @@ export class ServiceProvider extends ScopedServiceProvider {
 
 const iocSymbol = Symbol.for('anyioc://ioc');
 export const ioc = (function() {
+    if (typeof globalThis === 'undefined') {
+        return new ServiceProvider();
+    }
+
     const g = (<any>globalThis);
     if (g[iocSymbol] === undefined) {
         g[iocSymbol] = new ServiceProvider();
