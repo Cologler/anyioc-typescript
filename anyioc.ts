@@ -214,25 +214,45 @@ export namespace Resolvers {
 }
 
 namespace Utils {
-    export class ChainMap<K, V> {
-        private _maps: Array<Map<K, V>>;
 
-        constructor(parents: Array<Map<K, V>> = []) {
-            this._maps = [new Map<K, V>()];
-            this._maps.push(...parents);
+    // value of ChainMap is IServiceInfo, it cannot be undefined.
+    export class ChainMap<K, V> {
+        private _maps: Array<Map<K, V[]>>;
+
+        constructor(parentMaps: Array<Map<K, V[]>> | null = null) {
+            this._maps = [new Map<K, V[]>()];
+            this._maps.push(...parentMaps || []);
         }
 
-        get(key: K) {
+        get(key: K): V | undefined {
             for (const map of this._maps) {
-                if (map.has(key)) {
-                    return map.get(key);
+                const list = map.get(key);
+                if (list !== undefined) {
+                    return list[list.length-1];
                 }
             }
             return undefined;
         }
 
+        getMany(key: K): V[] {
+            const items: V[] = [];
+            for (const map of this._maps) {
+                const list = map.get(key);
+                if (list !== undefined) {
+                    items.push(...list.slice().reverse());
+                }
+            }
+            return items;
+        }
+
         set(key: K, value: V) {
-            this._maps[0].set(key, value);
+            const map = this._maps[0];
+            let list = map.get(key);
+            if (list === undefined) {
+                list = [];
+                map.set(key, list);
+            }
+            list.push(value);
         }
 
         child(): ChainMap<K, V> {
