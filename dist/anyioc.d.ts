@@ -25,6 +25,11 @@ export interface IServiceProvider {
      */
     getRequired<V>(key: any): V;
     /**
+     * resolve values by key.
+     * @param key
+     */
+    getMany<V>(key: any): V[];
+    /**
      * create a new scoped `IServiceProvider`.
      *
      * @returns {IServiceProvider}
@@ -171,6 +176,6 @@ declare class ScopedServiceProvider implements IServiceProvider {
 export declare class ServiceProvider extends ScopedServiceProvider {
     constructor();
 }
-export declare const ioc: any;
+export declare const ioc: ServiceProvider;
 export {};
 //# sourceMappingURL=anyioc.d.ts.map

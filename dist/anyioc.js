@@ -230,12 +230,24 @@ class ServiceProvider extends ScopedServiceProvider {
     }
 }
 exports.ServiceProvider = ServiceProvider;
+// gist: a85a89bcdc9445148ce213a3d31eeeb2
+function getGlobal() {
+    if (typeof globalThis !== 'undefined') {
+        return globalThis;
+    }
+    else if (typeof window !== 'undefined') {
+        return window; // browser
+    }
+    else if (typeof global != 'undefined') {
+        return global; // node
+    }
+    else {
+        throw Error('unknown');
+    }
+}
 const iocSymbol = Symbol.for('anyioc://ioc');
 exports.ioc = (function () {
-    if (typeof globalThis === 'undefined') {
-        return new ServiceProvider();
-    }
-    const g = globalThis;
+    const g = getGlobal();
     if (g[iocSymbol] === undefined) {
         g[iocSymbol] = new ServiceProvider();
     }

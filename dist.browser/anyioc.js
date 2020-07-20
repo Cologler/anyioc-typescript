@@ -95,7 +95,7 @@ var anyioc =
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
-
+/* WEBPACK VAR INJECTION */(function(global) {
 /* Copyright (c) 2018~2999 - Cologler <skyoflw@gmail.com> */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ioc = exports.ServiceProvider = exports.Resolvers = exports.LifeTime = exports.Symbols = void 0;
@@ -327,18 +327,62 @@ class ServiceProvider extends ScopedServiceProvider {
     }
 }
 exports.ServiceProvider = ServiceProvider;
+// gist: a85a89bcdc9445148ce213a3d31eeeb2
+function getGlobal() {
+    if (typeof globalThis !== 'undefined') {
+        return globalThis;
+    }
+    else if (typeof window !== 'undefined') {
+        return window; // browser
+    }
+    else if (typeof global != 'undefined') {
+        return global; // node
+    }
+    else {
+        throw Error('unknown');
+    }
+}
 const iocSymbol = Symbol.for('anyioc://ioc');
 exports.ioc = (function () {
-    if (typeof globalThis === 'undefined') {
-        return new ServiceProvider();
-    }
-    const g = globalThis;
+    const g = getGlobal();
     if (g[iocSymbol] === undefined) {
         g[iocSymbol] = new ServiceProvider();
     }
     return g[iocSymbol];
 })();
 //# sourceMappingURL=anyioc.js.map
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(/*! ./../node_modules/.pnpm/webpack@4.43.0_webpack@4.43.0/node_modules/webpack/buildin/global.js */ "./node_modules/.pnpm/webpack@4.43.0_webpack@4.43.0/node_modules/webpack/buildin/global.js")))
+
+/***/ }),
+
+/***/ "./node_modules/.pnpm/webpack@4.43.0_webpack@4.43.0/node_modules/webpack/buildin/global.js":
+/*!***********************************!*\
+  !*** (webpack)/buildin/global.js ***!
+  \***********************************/
+/*! no static exports found */
+/***/ (function(module, exports) {
+
+var g;
+
+// This works in non-strict mode
+g = (function() {
+	return this;
+})();
+
+try {
+	// This works if eval is allowed (see CSP)
+	g = g || new Function("return this")();
+} catch (e) {
+	// This works if the window reference is available
+	if (typeof window === "object") g = window;
+}
+
+// g can still be undefined, but nothing to do about it...
+// We return undefined, instead of nothing here, so it's
+// easier to handle this case. if(!global) { ...}
+
+module.exports = g;
+
 
 /***/ })
 
