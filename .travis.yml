@@ -4,10 +4,16 @@ node_js:
 cache:
   directories:
     - "node_modules"
+scripts:
+  - npm run test
 deploy:
-  provider: npm
-  email: "$NPM_EMAIL"
-  api_key: "$NPM_TOKEN"
-  on:
-    tags: true
-  skip_cleanup: true
+  - provider: script
+    script: npm version from-git --allow-same-version --force
+    on:
+      tags: true
+  - provider: npm
+    email: "$NPM_EMAIL"
+    api_key: "$NPM_TOKEN"
+    on:
+      tags: true
+    skip_cleanup: true
