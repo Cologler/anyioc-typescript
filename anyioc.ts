@@ -392,7 +392,7 @@ function getGlobal() {
 }
 
 const iocSymbol = Symbol.for('anyioc://ioc');
-export const ioc = (function() {
+export const ioc: ServiceProvider = (function() {
     const g = (<any> getGlobal());
     if (g[iocSymbol] === undefined) {
         g[iocSymbol] = new ServiceProvider();
