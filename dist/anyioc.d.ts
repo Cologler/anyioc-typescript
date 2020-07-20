@@ -96,6 +96,13 @@ export interface IServiceProvider {
      * @memberof IServiceProvider
      */
     registerGroup(key: any, keys: any[]): void;
+    /**
+     * bind a key to another key (target) as alias.
+     * @param {*} key
+     * @param {*} target
+     * @memberof IServiceProvider
+     */
+    registerBind(key: any, target: any): void;
 }
 export declare type Factory = (provider: IServiceProvider) => any;
 export declare enum LifeTime {
@@ -124,20 +131,26 @@ export declare namespace Resolvers {
 declare namespace Utils {
     class ChainMap<K, V> {
         private _maps;
-        constructor(parents?: Array<Map<K, V>>);
+        constructor(parentMaps?: Array<Map<K, V[]>> | null);
         get(key: K): V | undefined;
+        getMany(key: K): V[];
         set(key: K, value: V): void;
         child(): ChainMap<K, V>;
+    }
+    class ResolveStack {
+        private _resolveStack;
+        with<T>(key: any, resolver: () => T): T;
     }
 }
 declare class ScopedServiceProvider implements IServiceProvider {
     private _services;
-    private _getStackSet;
-    private _getStackArray;
+    private _resolveStack;
     constructor(_services: Utils.ChainMap<any, IServiceInfo>);
-    private _getInternal;
-    get<V>(key: any): V | undefined;
-    getRequired<V>(key: any): V;
+    private _getServiceInfo;
+    private _getServiceInfos;
+    get<TService>(key: any): TService | undefined;
+    getRequired<TService>(key: any): TService;
+    getMany<TService>(key: any): TService[];
     registerServiceInfo(key: any, serviceInfo: IServiceInfo): void;
     registerValue(key: any, value: any): void;
     register(key: any, factory: Factory, lifetime: LifeTime): void;
@@ -145,6 +158,7 @@ declare class ScopedServiceProvider implements IServiceProvider {
     registerScoped(key: any, factory: Factory): void;
     registerSingleton(key: any, factory: Factory): void;
     registerGroup(key: any, keys: any[]): void;
+    registerBind(key: any, target: any): void;
     scope(): IServiceProvider;
 }
 /**
@@ -157,6 +171,6 @@ declare class ScopedServiceProvider implements IServiceProvider {
 export declare class ServiceProvider extends ScopedServiceProvider {
     constructor();
 }
-export declare const ioc: ServiceProvider;
+export declare const ioc: any;
 export {};
 //# sourceMappingURL=anyioc.d.ts.map

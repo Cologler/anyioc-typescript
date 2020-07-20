@@ -214,78 +214,112 @@ export namespace Resolvers {
 }
 
 namespace Utils {
-    export class ChainMap<K, V> {
-        private _maps: Array<Map<K, V>>;
 
-        constructor(parents: Array<Map<K, V>> = []) {
-            this._maps = [new Map<K, V>()];
-            this._maps.push(...parents);
+    // value of ChainMap is IServiceInfo, it cannot be undefined.
+    export class ChainMap<K, V> {
+        private _maps: Array<Map<K, V[]>>;
+
+        constructor(parentMaps: Array<Map<K, V[]>> | null = null) {
+            this._maps = [new Map<K, V[]>()];
+            this._maps.push(...parentMaps || []);
         }
 
-        get(key: K) {
+        get(key: K): V | undefined {
             for (const map of this._maps) {
-                if (map.has(key)) {
-                    return map.get(key);
+                const list = map.get(key);
+                if (list !== undefined) {
+                    return list[list.length-1];
                 }
             }
             return undefined;
         }
 
+        getMany(key: K): V[] {
+            const items: V[] = [];
+            for (const map of this._maps) {
+                const list = map.get(key);
+                if (list !== undefined) {
+                    items.push(...list.slice().reverse());
+                }
+            }
+            return items;
+        }
+
         set(key: K, value: V) {
-            this._maps[0].set(key, value);
+            const map = this._maps[0];
+            let list = map.get(key);
+            if (list === undefined) {
+                list = [];
+                map.set(key, list);
+            }
+            list.push(value);
         }
 
         child(): ChainMap<K, V> {
             return new ChainMap(this._maps);
         }
     }
+
+    export class ResolveStack {
+        private _resolveStack: Set<any> = new Set();
+
+        with<T>(key: any, resolver: () => T): T {
+            if (this._resolveStack.has(key)) {
+                const chain = [...this._resolveStack, key].join(' => ');
+                throw new Error(`Recursive detected. Chain: ${chain}`);
+            }
+
+            this._resolveStack.add(key);
+            try {
+                return resolver();
+            } finally {
+                this._resolveStack.delete(key);
+            }
+        }
+    }
 }
 
 class ScopedServiceProvider implements IServiceProvider {
-    private _getStackSet: Set<any> = new Set();
-    private _getStackArray: Array<any> = [];
+    private _resolveStack: Utils.ResolveStack = new Utils.ResolveStack();
 
     constructor(private _services: Utils.ChainMap<any, IServiceInfo>) {
         this.registerValue(Symbols.Cache, new Map<IServiceInfo, any>());
     }
 
-    private _getInternal<V>(key: any): V | undefined {
-        let serviceInfo = this._services.get(key);
-        if (serviceInfo) {
-            return <V> serviceInfo.get(this);
+    private _getServiceInfo(key: any): IServiceInfo | undefined {
+        let serviceInfo =  this._services.get(key);
+        if (serviceInfo === undefined) {
+            const resolverServiceInfo = <IServiceInfo> this._services.get(Symbols.MissingResolver);
+            const resolver = <Resolvers.IServiceInfoResolver> resolverServiceInfo.get(this);
+            serviceInfo = resolver.get(this, key);
         }
-
-        const resolverServiceInfo = <IServiceInfo>this._services.get(Symbols.MissingResolver);
-        const resolver = <Resolvers.IServiceInfoResolver> resolverServiceInfo.get(this);
-        serviceInfo = <IServiceInfo> resolver.get(this, key);
-        if (serviceInfo) {
-            return <V> serviceInfo.get(this);
-        }
+        return serviceInfo;
     }
 
-    get<V>(key: any): V | undefined {
-        if (this._getStackSet.has(key)) {
-            const chain = [...this._getStackArray, key].join(' => ');
-            throw new Error(`Recursive detected. Chain: ${chain}`);
-        }
-
-        this._getStackSet.add(key);
-        this._getStackArray.push(key);
-
-        try {
-            return this._getInternal(key);
-        } finally {
-            this._getStackSet.delete(key);
-            this._getStackArray.pop();
-        }
+    private _getServiceInfos(key: any): IServiceInfo[] {
+        return this._services.getMany(key);
     }
 
-    getRequired<V>(key: any): V {
-        const value = this.get<V>(key);
+    get<TService>(key: any): TService | undefined {
+        const serviceInfo = this._getServiceInfo(key);
+        if (serviceInfo) {
+            return this._resolveStack.with<TService>(key, () => serviceInfo.get(this));
+        }
+        return undefined;
+    }
+
+    getRequired<TService>(key: any): TService {
+        const value = this.get<TService>(key);
         if (value === undefined) {
             throw new Error('unable to resolve the service');
         }
         return value;
+    }
+
+    getMany<TService>(key: any): TService[] {
+        const serviceInfos = this._getServiceInfos(key);
+        return this._resolveStack.with<TService[]>(key,
+            () => serviceInfos.map(si => si.get(this)));;
     }
 
     registerServiceInfo(key: any, serviceInfo: IServiceInfo) {
@@ -344,4 +378,24 @@ export class ServiceProvider extends ScopedServiceProvider {
     }
 }
 
-export const ioc = new ServiceProvider();
+// gist: a85a89bcdc9445148ce213a3d31eeeb2
+function getGlobal() {
+    if (typeof globalThis !== 'undefined') {
+        return globalThis;
+    } else if (typeof window !== 'undefined') {
+        return window; // browser
+    } else if (typeof global != 'undefined') {
+        return global; // node
+    } else {
+        throw Error('unknown');
+    }
+}
+
+const iocSymbol = Symbol.for('anyioc://ioc');
+export const ioc = (function() {
+    const g = (<any> getGlobal());
+    if (g[iocSymbol] === undefined) {
+        g[iocSymbol] = new ServiceProvider();
+    }
+    return g[iocSymbol];
+})();

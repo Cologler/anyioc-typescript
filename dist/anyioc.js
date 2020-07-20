@@ -1,6 +1,7 @@
 "use strict";
 /* Copyright (c) 2018~2999 - Cologler <skyoflw@gmail.com> */
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ioc = exports.ServiceProvider = exports.Resolvers = exports.LifeTime = exports.Symbols = void 0;
 exports.Symbols = {
     Provider: Symbol('Provider'),
     RootProvider: Symbol('RootProvider'),
@@ -16,9 +17,10 @@ var LifeTime;
 var Services;
 (function (Services) {
     class ServiceInfo {
-        constructor(_factory, _lifetime) {
+        constructor(_factory, _lifetime, _provider) {
             this._factory = _factory;
             this._lifetime = _lifetime;
+            this._provider = _provider;
             this._cache_value = null;
         }
         get(provider) {
@@ -33,8 +35,7 @@ var Services;
                     return cache.get(this);
                 case LifeTime.Singleton:
                     if (this._cache_value === null) {
-                        provider = provider.get(exports.Symbols.RootProvider);
-                        this._cache_value = [this._factory(provider)];
+                        this._cache_value = [this._factory(this._provider)];
                     }
                     return this._cache_value[0];
             }
@@ -65,6 +66,15 @@ var Services;
         }
     }
     Services.GroupedServiceInfo = GroupedServiceInfo;
+    class BindedServiceInfo {
+        constructor(_targetKey) {
+            this._targetKey = _targetKey;
+        }
+        get(provider) {
+            return provider.get(this._targetKey);
+        }
+    }
+    Services.BindedServiceInfo = BindedServiceInfo;
 })(Services || (Services = {}));
 var Resolvers;
 (function (Resolvers) {
@@ -77,61 +87,89 @@ var Resolvers;
 })(Resolvers = exports.Resolvers || (exports.Resolvers = {}));
 var Utils;
 (function (Utils) {
+    // value of ChainMap is IServiceInfo, it cannot be undefined.
     class ChainMap {
-        constructor(parents = []) {
+        constructor(parentMaps = null) {
             this._maps = [new Map()];
-            this._maps.push(...parents);
+            this._maps.push(...parentMaps || []);
         }
         get(key) {
             for (const map of this._maps) {
-                if (map.has(key)) {
-                    return map.get(key);
+                const list = map.get(key);
+                if (list !== undefined) {
+                    return list[list.length - 1];
                 }
             }
             return undefined;
         }
+        getMany(key) {
+            const items = [];
+            for (const map of this._maps) {
+                const list = map.get(key);
+                if (list !== undefined) {
+                    items.push(...list.slice().reverse());
+                }
+            }
+            return items;
+        }
         set(key, value) {
-            this._maps[0].set(key, value);
+            const map = this._maps[0];
+            let list = map.get(key);
+            if (list === undefined) {
+                list = [];
+                map.set(key, list);
+            }
+            list.push(value);
         }
         child() {
             return new ChainMap(this._maps);
         }
     }
     Utils.ChainMap = ChainMap;
+    class ResolveStack {
+        constructor() {
+            this._resolveStack = new Set();
+        }
+        with(key, resolver) {
+            if (this._resolveStack.has(key)) {
+                const chain = [...this._resolveStack, key].join(' => ');
+                throw new Error(`Recursive detected. Chain: ${chain}`);
+            }
+            this._resolveStack.add(key);
+            try {
+                return resolver();
+            }
+            finally {
+                this._resolveStack.delete(key);
+            }
+        }
+    }
+    Utils.ResolveStack = ResolveStack;
 })(Utils || (Utils = {}));
 class ScopedServiceProvider {
     constructor(_services) {
         this._services = _services;
-        this._getStackSet = new Set();
-        this._getStackArray = [];
+        this._resolveStack = new Utils.ResolveStack();
         this.registerValue(exports.Symbols.Cache, new Map());
     }
-    _getInternal(key) {
+    _getServiceInfo(key) {
         let serviceInfo = this._services.get(key);
-        if (serviceInfo) {
-            return serviceInfo.get(this);
+        if (serviceInfo === undefined) {
+            const resolverServiceInfo = this._services.get(exports.Symbols.MissingResolver);
+            const resolver = resolverServiceInfo.get(this);
+            serviceInfo = resolver.get(this, key);
         }
-        const resolverServiceInfo = this._services.get(exports.Symbols.MissingResolver);
-        const resolver = resolverServiceInfo.get(this);
-        serviceInfo = resolver.get(this, key);
-        if (serviceInfo) {
-            return serviceInfo.get(this);
-        }
+        return serviceInfo;
+    }
+    _getServiceInfos(key) {
+        return this._services.getMany(key);
     }
     get(key) {
-        if (this._getStackSet.has(key)) {
-            const chain = [...this._getStackArray, key].join(' => ');
-            throw new Error(`Recursive detected. Chain: ${chain}`);
+        const serviceInfo = this._getServiceInfo(key);
+        if (serviceInfo) {
+            return this._resolveStack.with(key, () => serviceInfo.get(this));
         }
-        this._getStackSet.add(key);
-        this._getStackArray.push(key);
-        try {
-            return this._getInternal(key);
-        }
-        finally {
-            this._getStackSet.delete(key);
-            this._getStackArray.pop();
-        }
+        return undefined;
     }
     getRequired(key) {
         const value = this.get(key);
@@ -140,6 +178,11 @@ class ScopedServiceProvider {
         }
         return value;
     }
+    getMany(key) {
+        const serviceInfos = this._getServiceInfos(key);
+        return this._resolveStack.with(key, () => serviceInfos.map(si => si.get(this)));
+        ;
+    }
     registerServiceInfo(key, serviceInfo) {
         this._services.set(key, serviceInfo);
     }
@@ -147,7 +190,7 @@ class ScopedServiceProvider {
         this._services.set(key, new Services.ValueServiceInfo(value));
     }
     register(key, factory, lifetime) {
-        this._services.set(key, new Services.ServiceInfo(factory, lifetime));
+        this._services.set(key, new Services.ServiceInfo(factory, lifetime, this));
     }
     registerTransient(key, factory) {
         return this.register(key, factory, LifeTime.Transient);
@@ -160,6 +203,9 @@ class ScopedServiceProvider {
     }
     registerGroup(key, keys) {
         this._services.set(key, new Services.GroupedServiceInfo(keys));
+    }
+    registerBind(key, target) {
+        this._services.set(key, new Services.BindedServiceInfo(target));
     }
     scope() {
         return new ScopedServiceProvider(this._services.child());
@@ -184,5 +230,15 @@ class ServiceProvider extends ScopedServiceProvider {
     }
 }
 exports.ServiceProvider = ServiceProvider;
-exports.ioc = new ServiceProvider();
+const iocSymbol = Symbol.for('anyioc://ioc');
+exports.ioc = (function () {
+    if (typeof globalThis === 'undefined') {
+        return new ServiceProvider();
+    }
+    const g = globalThis;
+    if (g[iocSymbol] === undefined) {
+        g[iocSymbol] = new ServiceProvider();
+    }
+    return g[iocSymbol];
+})();
 //# sourceMappingURL=anyioc.js.map

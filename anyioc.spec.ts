@@ -7,9 +7,37 @@ describe('anyioc', function() {
     describe('ServiceProvider', function() {
         describe('#get()', function() {
 
+            it('should return value of match any', function() {
+                const provider = new ServiceProvider();
+                provider.registerSingleton('any', () => 15);
+                assert.strictEqual(provider.get('any'), 15);
+            })
+
             it('should return undefined on some not exists value', function() {
                 const provider = new ServiceProvider();
                 assert.strictEqual(provider.get('any'), undefined);
+            })
+        })
+
+        describe('#getMany()', function() {
+
+            it('should return array if match one', function() {
+                const provider = new ServiceProvider();
+                provider.registerValue('a', 2);
+                assert.deepStrictEqual(provider.getMany('a'), [2]);
+            })
+
+            it('should return array with reverse order if match many', function() {
+                const provider = new ServiceProvider();
+                provider.registerValue('a', 3);
+                provider.registerValue('a', 1);
+                provider.registerValue('a', 2);
+                assert.deepStrictEqual(provider.getMany('a'), [2, 1, 3]);
+            })
+
+            it('should return empty array if no match', function() {
+                const provider = new ServiceProvider();
+                assert.deepStrictEqual(provider.getMany('any'), []);
             })
         })
 
