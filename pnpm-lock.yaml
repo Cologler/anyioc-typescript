@@ -1745,8 +1745,8 @@ packages:
       path-exists: 3.0.0
     dev: true
 
-  /lodash@4.17.15:
-    resolution: {integrity: sha512-8xOcRHvCjnocdS5cpwXQXVzmmh5e5+saE2QGoeQmbKmRS6J3VQppPOIt0MnmE+4xlZoumy0GPG0D0MVIQbNA1A==}
+  /lodash@4.17.21:
+    resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
     dev: true
 
   /log-symbols@3.0.0:
@@ -3187,7 +3187,7 @@ packages:
     engines: {node: '>=6'}
     dependencies:
       flat: 4.1.0
-      lodash: 4.17.15
+      lodash: 4.17.21
       yargs: 13.3.2
     dev: true
 
